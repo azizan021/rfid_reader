@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFID Student Reader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --warning-color: #f72585;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--dark-color);
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .status-dot {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background-color: #6c757d;
+        }
+        
+        .status-text {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .active {
+            background-color: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+        
+        .student-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .student-photo {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid var(--accent-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+        }
+        
+        .student-info {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: var(--primary-color);
+            min-width: 100px;
+        }
+        
+        .info-value {
+            font-weight: 400;
+            color: var(--dark-color);
+        }
+        
+        .scan-time {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .university-logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .student-photo {
+                width: 140px;
+                height: 140px;
+            }
+            
+            .info-row {
+                flex-direction: column;
+            }
+            
+            .info-label {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img src="images/logo-university.png" alt="University Logo" class="university-logo">
+    
+    <div class="container">
+        <header>
+            <h1>STUDENT ATTENDANCE SYSTEM</h1>
+            <p class="subtitle">RFID Based Identification Platform</p>
+        </header>
+        
+        <div class="status-indicator">
+            <div class="status-dot" id="status-dot"></div>
+            <span class="status-text" id="status-text">Ready to scan</span>
+        </div>
+        
+        <div id="student-data">
+            <div class="no-data">
+                <p>Please tap your student card on the RFID reader</p>
+                <p>⬇️</p>
+                <div style="font-size: 3rem;">🎓</div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        &copy; 2023 Teknik Elektro University | RFID Attendance System
+    </footer>
+
+    <script>
+        let lastScannedNIM = null;
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        
+        // Update status indicator
+        function updateStatus(type, message) {
+            statusDot.classList.remove('active');
+            
+            if (type === 'scanning') {
+                statusDot.style.backgroundColor = 'var(--accent-color)';
+                statusText.textContent = 'Scanning...';
+            } else if (type === 'success') {
+                statusDot.classList.add('active');
+                statusText.textContent = 'Scan successful';
+                setTimeout(() => {
+                    statusText.textContent = 'Ready to scan';
+                    statusDot.style.backgroundColor = 'var(--success-color)';
+                }, 2000);
+            } else if (type === 'error') {
+                statusDot.style.backgroundColor = 'var(--warning-color)';
+                statusText.textContent = message || 'Scan failed';
+                setTimeout(() => {
+                    statusText.textContent = 'Ready to scan';
+                    statusDot.style.backgroundColor = '#6c757d';
+                }, 3000);
+            }
+        }
+        
+        async function fetchStudentData() {
+            try {
+                updateStatus('scanning');
+                
+                const response = await fetch('get_data.php?t=' + new Date().getTime());
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    if (!lastScannedNIM || lastScannedNIM !== data.nim) {
+                        displayStudentData(data);
+                        lastScannedNIM = data.nim;
+                        updateStatus('success');
+                    }
+                } else {
+                    if (!document.querySelector('.no-data')) {
+                        showNoData(data.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                updateStatus('error', 'Connection error');
+            }
+        }
+        
+        function displayStudentData(data) {
+            const now = new Date();
+            const scanTime = now.toLocaleString('id-ID', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            document.getElementById('student-data').innerHTML = `
+                <div class="student-card">
+                    <img src="${data.photo}" alt="Student Photo" class="student-photo" 
+                         onerror="this.src='images/default-profile.jpg'">
+                    <div class="student-info">
+                        <div class="info-row">
+                            <span class="info-label">Name</span>
+                            <span class="info-value">${data.name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">NIM</span>
+                            <span class="info-value">${data.nim}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Program</span>
+                            <span class="info-value">${data.jurusan}</span>
+                        </div>
+                    </div>
+                    <div class="scan-time">
+                        Scanned at: ${scanTime}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showNoData(message) {
+            document.getElementById('student-data').innerHTML = `
+                <div class="no-data">
+                    <p>${message || 'Please tap your student card'}</p>
+                    <p>⬇️</p>
+                    <div style="font-size: 3rem;">🎓</div>
+                </div>
+            `;
+        }
+        
+        // Real-time update with EventSource
+        function setupEventSource() {
+            const eventSource = new EventSource('sse.php');
+            
+            eventSource.onmessage = function(e) {
+                fetchStudentData();
+            };
+            
+            eventSource.onerror = function() {
+                console.log("SSE connection error, falling back to polling");
+                eventSource.close();
+                setInterval(fetchStudentData, 1000);
+            };
+        }
+        
+        // Initialize
+        if (typeof EventSource !== 'undefined') {
+            setupEventSource();
+        } else {
+            setInterval(fetchStudentData, 1000);
+        }
+        
+        // Initial load
+        fetchStudentData();
+    </script>
+</body>
+</html>
